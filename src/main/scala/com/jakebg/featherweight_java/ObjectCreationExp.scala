@@ -1,3 +1,3 @@
 package com.jakebg.featherweight_java
 
-case class ObjectCreationExp(className: String, term: List[Exp]) extends Exp
+case class ObjectCreationExp(className: String, parameters: List[Exp]) extends Exp
