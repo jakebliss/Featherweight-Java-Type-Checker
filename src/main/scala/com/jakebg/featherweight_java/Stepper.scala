@@ -2,19 +2,19 @@ package com.jakebg.featherweight_java
 
 object Stepper {
 
-//  def resolveAST(ast: Exp): Exp = {
-//    var steppedAST = ast
+  def resolveAST(ast: Exp): Exp = {
+    var steppedAST = ast
 //    var x = 0
 //    while(!steppedAST.isInstanceOf[NatNumExp]) {
 //      steppedAST = step(steppedAST)
 //      x += 1
 //    }
-//    return steppedAST
-//  }
+    return steppedAST
+  }
 
-//  def step(ast: Exp) : Exp = {
-//    ast match {
-
+  def step(ast: Exp) : Exp = {
+    ast match {
+//
 //      case (ast: BinaryExp) =>
 //        ast.operator match {
 //          case "+" => return additionStep(ast.left, ast.right)
@@ -22,11 +22,11 @@ object Stepper {
 //
 //      case (ast: ApplicationExp) =>
 //        return applicationStep(ast.leftExp, ast.rightExp)
-
-//      case (ast: Exp) =>
-//        return ast
-//    }
-//  }
+//
+      case (ast: Exp) =>
+        return ast
+    }
+  }
 
 //  def additionStep(left: Exp, right: Exp) : Exp = {
 //    (left, right) match {
