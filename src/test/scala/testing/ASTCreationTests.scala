@@ -7,31 +7,40 @@ import org.scalatest.FunSuite
 class ASTCreationTests extends FunSuite {
   //Test for the creation of a class declaration expresion
   test("ClassExp Creation") {
-    val ast = ClassExp("TestClass", "SuperClass", List(("Object", "value")),
-      ConstructorExp("TestClass", List(("Object", "value")), List("testField")),
-      List(MethodExp("TestClass", "testMethod", List(("Object", "value")), VariableExp("x"))))
-    assert(ast.className === "TestClass")
-    assert(ast.superClass === "SuperClass")
-    assert(ast.parameterList(0) === ("Object", "value"))
-    assert(ast.constructor === ConstructorExp("TestClass", List(("Object", "value")), List("testField")))
-    assert(ast.methods(0) === MethodExp("TestClass", "testMethod", List(("Object", "value")), VariableExp("x")))
+    val ast = ClassExp("Pair", "Object", List(("A", "fst"), ("B", "snd")),
+      ConstructorExp("Pair", List(("A", "fst"), ("B", "snd")), List.empty, List("A","B")),
+      List(MethodExp("Pair", "setfst", List(("Object", VariableExp("newfst"))), ObjectCreationExp("Pair", List(VariableExp("newfst"),
+        FieldAccessExp(VariableExp("this"), "snd"))))))
+
+    assert(ast.className === "Pair")
+    assert(ast.superClass === "Object")
+    assert(ast.parameterList(0) === ("A", "fst"))
+    assert(ast.parameterList(1) === ("B", "snd"))
+    assert(ast.constructor === ConstructorExp("Pair", List(("A", "fst"), ("B", "snd")), List.empty, List("A","B")))
+    assert(ast.methods(0) === MethodExp("Pair", "setfst", List(("Object", VariableExp("newfst"))),
+      ObjectCreationExp("Pair", List(VariableExp("newfst"), FieldAccessExp(VariableExp("this"), "snd")))))
   }
 
   // Test for the creation of a constructor declaration expression
   test("ConstructorExp Creation") {
-    val ast = ConstructorExp("TestClass", List(("Object", "value")), List("testField"))
-    assert(ast.className === "TestClass")
-    assert(ast.parameterList(0) === ("Object", "value"))
-    assert(ast.fields(0) == "testField")
+    val ast = ConstructorExp("Pair", List(("A", "fst"), ("B", "snd")), List.empty, List("A","B"))
+    assert(ast.className === "Pair")
+    assert(ast.parameterList(0) === ("A", "fst"))
+    assert(ast.parameterList(1) === ("B", "snd"))
+    assert(ast.superFields === List.empty)
+    assert(ast.fields(0) == "A")
+    assert(ast.fields(1) == "B")
   }
 
   // Test for the creation of a method declaration expression
   test("MethodExp Creation") {
-    val ast = MethodExp("TestClass", "testMethod", List(("Object", "value")), VariableExp("x"))
-    assert(ast.className === "TestClass")
-    assert(ast.methodName === "testMethod")
-    assert(ast.parameterList(0) === ("Object", "value"))
-    assert(ast.functionBody === VariableExp("x"))
+    val ast = MethodExp("Pair", "setfst", List(("Object", VariableExp("newfst"))), ObjectCreationExp("Pair", List(VariableExp("newfst"),
+      FieldAccessExp(VariableExp("this"), "snd"))))
+    assert(ast.className === "Pair")
+    assert(ast.methodName === "setfst")
+    assert(ast.parameterList(0) === ("Object", VariableExp("newfst")))
+    assert(ast.functionBody === ObjectCreationExp("Pair", List(VariableExp("newfst"),
+      FieldAccessExp(VariableExp("this"), "snd"))))
   }
 
   // Test for the creation of a variable expresion
@@ -60,7 +69,7 @@ class ASTCreationTests extends FunSuite {
                   List(VariableExp("x")))
     assert(ast.term === ObjectCreationExp("TestClass", List(VariableExp("x"))))
     assert(ast.methodName === "testMethod")
-    assert(ast.parameter(0) === VariableExp("x"))
+    assert(ast.parameters(0) === VariableExp("x"))
   }
 
   // Test for the creation of cast expression

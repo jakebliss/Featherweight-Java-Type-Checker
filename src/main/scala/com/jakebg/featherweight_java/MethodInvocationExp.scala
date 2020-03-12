@@ -1,3 +1,3 @@
 package com.jakebg.featherweight_java
 
-case class MethodInvocationExp(term: Exp, methodName: String, parameter: List[Exp]) extends Exp
+case class MethodInvocationExp(term: Exp, methodName: String, parameters: List[Exp]) extends Exp

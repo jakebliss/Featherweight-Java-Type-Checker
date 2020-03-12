@@ -1,16 +1,27 @@
 package testing
 
-import com.jakebg.featherweight_java.{CastExp, Exp, FieldAccessExp, MethodExp, MethodInvocationExp, ObjectCreationExp, Stepper, VariableExp}
+import com.jakebg.featherweight_java.{CastExp, ClassExp, ConstructorExp, Exp, FieldAccessExp, MethodExp, MethodInvocationExp, ObjectCreationExp, Stepper, VariableExp}
 import org.scalatest.FunSuite
 
 // Unit tests for semantic step and resolution rules
 class SemanticRulesTests extends FunSuite {
+  var classDefinitions = List[ClassExp]()
+  classDefinitions = classDefinitions :+ ClassExp("A", "Object", List.empty,
+    ConstructorExp("A", List.empty, List.empty, List.empty), List.empty)
+  classDefinitions = classDefinitions :+ ClassExp("B", "Object", List.empty,
+    ConstructorExp("B", List.empty, List.empty, List.empty), List.empty)
+  classDefinitions = classDefinitions :+ ClassExp("Pair", "Object", List(("Object", "fst"), ("Object", "snd")),
+    ConstructorExp("Pair", List(("Object", "fst"), ("Object", "snd")), List.empty, List("A","B")),
+    List(MethodExp("Pair", "setfst", List(("Object", VariableExp("newfst"))), ObjectCreationExp("Pair", List(VariableExp("newfst"),
+          FieldAccessExp(VariableExp("this"), "snd"))))))
+  Stepper.initialize(classDefinitions)
+
   // Test to step from a field access expression should return the first field element (E-ProjNew)
   test("Step from a field lookup expression (fst)") {
     val ast = FieldAccessExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))), "fst")
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === ObjectCreationExp("A"))
+    assert(steppedAst === ObjectCreationExp("A"))
   }
 
   // Test to step from a field access expression should return the second field element (E-ProjNew)
@@ -18,21 +29,22 @@ class SemanticRulesTests extends FunSuite {
     val ast = FieldAccessExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))), "snd")
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === ObjectCreationExp("B"))
+    assert(steppedAst === ObjectCreationExp("B"))
   }
 
   // Test to step from a method invocation expression (E-InvkNew)
-  // new Pair(new A(), new B()).setfst(new B())
-  //   ->  [newfst -> new B()
+  // new Pair(new A(), new B()).setfst(new A())
+  //   ->  [newfst -> new A()
   //        this -> new Pair(new A(),new B())]
   //        new Pair(newfst, this.snd)
-  test("Step from a field lookup expression") {
+  test("Step from a method call expression") {
     val ast = MethodInvocationExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))),
                         "setfst", List(ObjectCreationExp("B")))
 
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === ObjectCreationExp("Pair", List(VariableExp("newFst"), FieldAccessExp(VariableExp("this"), "snd"))))
+    assert(steppedAst === ObjectCreationExp("Pair", List(ObjectCreationExp("B"),
+      FieldAccessExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))), "snd"))))
   }
 
   // Test to step from a cast expression (E-CastNew)
@@ -42,7 +54,7 @@ class SemanticRulesTests extends FunSuite {
     val ast = CastExp("Pair", ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))))
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))))
+    assert(steppedAst === ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))))
   }
 
   // Test to step from a cast expression on a object creation (E-CastNew)
@@ -52,7 +64,7 @@ class SemanticRulesTests extends FunSuite {
     val ast = CastExp("NotPair", ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))))
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === CastExp("NotPair", ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B")))))
+    assert(steppedAst === CastExp("NotPair", ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B")))))
   }
 
   // Test to take a step from a field access expression on a term (E-Field)
@@ -63,22 +75,24 @@ class SemanticRulesTests extends FunSuite {
                 List(ObjectCreationExp("A"), ObjectCreationExp("B")))), "snd")
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === FieldAccessExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))),
+    assert(steppedAst === FieldAccessExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))),
                       "snd"))
   }
 
   // Test to step from a method invocation expression that contains another method invocation expression (E-Invk-Recv)
-  // new Pair(new A(), new B()).setfst(new B()).setsnd(new A())
-  //   ->  [newfst -> new B()
-  //        this -> new Pair(new A(),new B()).setfst(new B())]
-  //        new Pair(newfst, this.snd).setsnd(new A())
+  // new Pair(new A(), new B()).setfst(new A()).setsnd(new B())
+  //   ->  [newfst -> new A()
+  //        this -> new Pair(new A(),new B())]
+  //        new Pair(newfst, this.snd).setsnd(new B())
+  //        new Pair(new A(), new Pair(new A(),new B()).snd).setsnd(new B()),
   test("Step from a method invocation expression that contains a term as a parameter") {
     val ast = MethodInvocationExp(MethodInvocationExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"),
-              ObjectCreationExp("B"))),"setfst", List(ObjectCreationExp("B"))), "setsnd",  List(ObjectCreationExp("A")))
+              ObjectCreationExp("B"))),"setfst", List(ObjectCreationExp("A"))), "setsnd",  List(ObjectCreationExp("B")))
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === MethodInvocationExp(ObjectCreationExp("Pair", List(VariableExp("newFst"),
-                FieldAccessExp(VariableExp("this"), "snd"))), "setsnd",  List(ObjectCreationExp("A"))))
+    assert(steppedAst === MethodInvocationExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"),
+        FieldAccessExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"),
+        ObjectCreationExp("B"))), "snd"))), "setsnd",  List(ObjectCreationExp("B"))))
   }
 
   // Test to take a step from an object creation expression that contains has a term that needs to be stepped as a
@@ -91,7 +105,7 @@ class SemanticRulesTests extends FunSuite {
       ObjectCreationExp("Pair", List(ObjectCreationExp("C"), ObjectCreationExp("B"))), "fst")))
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === MethodInvocationExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"),
+    assert(steppedAst === MethodInvocationExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"),
       ObjectCreationExp("B"))),"setfst", List(ObjectCreationExp("C"))))
   }
 
@@ -99,12 +113,12 @@ class SemanticRulesTests extends FunSuite {
   // parameter (E-New-Arg)
   // new Pair(new A(), new Pair(new C(), new B()).fst)
   //   -> new Pair(new A(), new C())
-  test("Step from a field lookup expression") {
+  test("Step from a object creations expression with a feild that needs to be resolved") {
     val ast = ObjectCreationExp("Pair", List(ObjectCreationExp("A"), FieldAccessExp(
               ObjectCreationExp("Pair", List(ObjectCreationExp("C"), ObjectCreationExp("B"))), "fst")))
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("C")))
+    assert(steppedAst === ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("C"))))
   }
 
   // Test to step from a cast expression on a term (E-Cast)
@@ -115,6 +129,6 @@ class SemanticRulesTests extends FunSuite {
                         List(ObjectCreationExp("A"), ObjectCreationExp("B"))), "fst"))
 
     val steppedAst = Stepper.step(ast)
-    assert(ast === CastExp("A", ObjectCreationExp("A")))
+    assert(steppedAst === CastExp("A", ObjectCreationExp("A")))
   }
 }
