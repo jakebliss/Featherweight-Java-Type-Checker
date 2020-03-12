@@ -11,7 +11,7 @@ class SemanticRulesTests extends FunSuite {
   classDefinitions = classDefinitions :+ ClassExp("B", "Object", List.empty,
     ConstructorExp("B", List.empty, List.empty, List.empty), List.empty)
   classDefinitions = classDefinitions :+ ClassExp("Pair", "Object", List(("Object", "fst"), ("Object", "snd")),
-    ConstructorExp("Pair", List(("Object", "fst"), ("Object", "snd")), List.empty, List("A","B")),
+    ConstructorExp("Pair", List(("Object", "fst"), ("Object", "snd")), List.empty, List("fst","snd")),
     List(MethodExp("Pair", "setfst", List(("Object", VariableExp("newfst"))), ObjectCreationExp("Pair", List(VariableExp("newfst"),
           FieldAccessExp(VariableExp("this"), "snd")))),
          MethodExp("Pair", "setsnd", List(("Object", VariableExp("newsnd"))),
