@@ -1,89 +1,204 @@
 package com.jakebg.featherweight_java
 
+import scala.collection.mutable
+import scala.collection.mutable.Map
+
 object Stepper {
+  var classMap = Map("Object" -> List(("", "")))
+  var methodBodyMap = Map[(String, String), (List[VariableExp], Exp)]()
+  var classDefinitions: List[ClassExp] = _
+
+  def initialize (classDefList: List[ClassExp]): Unit = {
+    classDefinitions = classDefList
+
+    for (classDef <- classDefinitions) {
+      classMap = classMap + (classDef.className -> classDef.parameterList)
+
+      for (method <- classDef.methods) {
+        var parameters = List[VariableExp]()
+        for (parameter <- method.parameterList) {
+          parameters = parameters :+ parameter.asInstanceOf[(String, VariableExp)]._2
+        }
+        methodBodyMap = methodBodyMap + ((method.methodName, classDef.className) -> (parameters, method.functionBody))
+      }
+    }
+  }
 
   def resolveAST(ast: Exp): Exp = {
     var steppedAST = ast
-//    var x = 0
-//    while(!steppedAST.isInstanceOf[NatNumExp]) {
-//      steppedAST = step(steppedAST)
-//      x += 1
-//    }
     return steppedAST
   }
 
   def step(ast: Exp) : Exp = {
     ast match {
-//
-//      case (ast: BinaryExp) =>
-//        ast.operator match {
-//          case "+" => return additionStep(ast.left, ast.right)
-//        }
-//
-//      case (ast: ApplicationExp) =>
-//        return applicationStep(ast.leftExp, ast.rightExp)
-//
-      case (ast: Exp) =>
-        return ast
+
+      case (ast: FieldAccessExp) =>
+        return fieldAccessStep(ast.term, ast.fieldName)
+
+      case (ast: MethodInvocationExp) =>
+        return methodInvocationStep(ast.term, ast.methodName, ast.parameters)
+
+      case (ast: CastExp) =>
+        return castStep(ast.term, ast.className)
+
+      case (ast: ObjectCreationExp) =>
+        return objectCreationStep(ast)
     }
   }
 
-//  def additionStep(left: Exp, right: Exp) : Exp = {
-//    (left, right) match {
-//      case (left: NatNumExp, right: NatNumExp)  =>
-//        // ADD 3
-//        return NatNumExp(left.value + right.value)
-//      case (left: NatNumExp, right: Exp) =>
-//        // ADD 2
-//        return BinaryExp("+", left, step(right))
-//      case (left: AbstractionExp, right: Exp) =>
-//        // ADD 2
-//        return BinaryExp("+", left, step(right))
-//      case(left: Exp, right: Exp) =>
-//        // ADD 1
-//        return BinaryExp("+", step(left), right)
-//    }
-//  }
-//
-//  def applicationStep(left: Exp, right: Exp): Exp = {
-//    (left, right) match {
-//      case (left: AbstractionExp, right: NatNumExp)  =>
-//        // APP3
-//        return(substituteVariable(left.body, left.parameter, right))
-//      case (left: AbstractionExp, right: AbstractionExp)  =>
-//        // APP3
-//        return(substituteVariable(left.body, left.parameter, right))
-//      case (left: AbstractionExp, right: Exp) =>
-//        // APP2
-//        return ApplicationExp(left, step(right))
-//      case(left: Exp, right: Exp) =>
-//        // APP1
-//        return ApplicationExp(step(left), right)
-//    }
-//  }
-//
-//  def substituteVariable(ast: Exp, variable: VariableExp, value: Exp): Exp = {
-//    ast match {
-//      case ast: NatNumExp  =>
-//        return ast
-//      case ast: VariableExp =>
-//        if(ast == variable) {
-//          return value
-//        }
-//        return ast
-//      case ast: AbstractionExp =>
-//        if(ast.parameter == variable) {
-//          return ast
-//        } else {
-//          return AbstractionExp(ast.parameter, ast.parType, substituteVariable(ast.body, variable, value))
-//        }
-//      case ast: ApplicationExp =>
-//        return ApplicationExp(substituteVariable(ast.leftExp, variable, value),
-//                                substituteVariable(ast.rightExp, variable, value))
-//      case ast: BinaryExp =>
-//        return BinaryExp(ast.operator, substituteVariable(ast.left, variable, value),
-//                                        substituteVariable(ast.right, variable, value))
-//    }
-//  }
+  def fieldAccessStep(term: Exp, fieldName: String) : Exp = {
+    (term) match {
+      case (term: ObjectCreationExp) =>
+        getFields(term.className) match {
+          case Some(fieldList) =>
+            var index = 0
 
+            for (field <- fieldList) {
+              if (field.asInstanceOf[(String, String)]._2 == fieldName) {
+                return term.parameters(index)
+              }
+              index += 1
+            }
+            println ("Field not found")
+            return null
+          case None =>
+            println ("Invalid class name")
+            return null
+        }
+      case (term: Exp) => {
+        return FieldAccessExp(step(term), fieldName)
+      }
+    }
+  }
+
+  def methodInvocationStep(term: Exp, methodName: String,  parameters: List[Exp]): Exp = {
+    (term) match {
+      case (term: FieldAccessExp) =>
+        return MethodInvocationExp(step(term), methodName, parameters)
+
+      case (term: MethodInvocationExp) =>
+        return MethodInvocationExp(step(term), methodName, parameters)
+
+      case (term: CastExp) =>
+        return MethodInvocationExp(step(term), methodName, parameters)
+
+      case (term: ObjectCreationExp) =>
+        if(!parameters.isEmpty) {
+          var newParameters = List[Exp]()
+          for(parameter <- parameters) {
+            newParameters = newParameters :+ step(parameter)
+          }
+          if(parameters != newParameters) {
+            return MethodInvocationExp(term, methodName, newParameters)
+          }
+        }
+
+        getMethod(methodName, term.className) match {
+          case Some(method) =>
+            val methodTuple = method.asInstanceOf[(List[VariableExp], Exp)]
+            var variableList = methodTuple._1
+            variableList = variableList
+            var body = methodTuple._2.asInstanceOf[ObjectCreationExp]
+
+            for (index <- 0 until variableList.size) {
+              body = substituteVariables(body, variableList(index), parameters(index)).asInstanceOf[ObjectCreationExp]
+            }
+            body = substituteVariables(body, VariableExp("this"), term).asInstanceOf[ObjectCreationExp]
+            return body
+          case None =>
+            println("Method does not exist")
+            return null;
+        }
+
+      case (term: Exp) => {
+        return term
+      }
+    }
+  }
+
+  def objectCreationStep(term: ObjectCreationExp): Exp = {
+    if (term.parameters.isEmpty){
+      return term
+    }
+    else {
+      var newParameters = List[Exp]()
+      for(parameter <- term.parameters) {
+        newParameters = newParameters :+ step(parameter)
+      }
+      return ObjectCreationExp(term.className, newParameters)
+    }
+  }
+
+  def castStep(term: Exp, castClassName: String): Exp = {
+    (term) match {
+      case(term: ObjectCreationExp) =>
+        if(checkIfSubtype(term.className, castClassName)) {
+          return ObjectCreationExp(castClassName, term.parameters)
+        }
+        else {
+          println("Cast failed")
+          return CastExp(castClassName, term)
+        }
+
+      case(term: Exp) =>
+        return CastExp(castClassName, step(term))
+    }
+  }
+
+  def substituteVariables(ast: Exp, variable: VariableExp, value: Exp): Exp = {
+    ast match {
+      case ast: ObjectCreationExp  =>
+        var newParameters = List[Exp]()
+        for(parameter <- ast.parameters) {
+          newParameters = newParameters :+ substituteVariables(parameter, variable, value)
+        }
+        return ObjectCreationExp(ast.className, newParameters)
+
+      case ast: VariableExp =>
+        if(ast == variable) {
+          return value
+        }
+        return ast
+      case ast: FieldAccessExp =>
+        return FieldAccessExp(substituteVariables(ast.term, variable, value), ast.fieldName)
+      case ast: MethodInvocationExp =>
+        var newParameters = List[Exp]()
+        for(parameter <- ast.parameters) {
+          newParameters = newParameters :+ substituteVariables(parameter, variable, value)
+        }
+        return MethodInvocationExp(substituteVariables(ast.term, variable, value), ast.methodName, newParameters)
+      case ast: CastExp =>
+        return CastExp(ast.className, substituteVariables(ast.term, variable, value))
+    }
+  }
+
+  def checkIfSubtype(originalClass: String, castClass: String): Boolean = {
+    if(originalClass == castClass) {
+      return true;
+    }
+
+    var queue = mutable.Queue(originalClass)
+
+    while(!queue.isEmpty) {
+      val curClass = queue.dequeue()
+      for (classDef <- classDefinitions) {
+        if (classDef.className == curClass)
+          if (classDef.superClass == castClass) {
+            return true
+          }
+          else {
+            queue.enqueue(classDef.superClass)
+          }
+      }
+    }
+    return false
+  }
+
+  def getFields(className: String): Option[List[(String, String)]] = {
+    return classMap.get(className)
+  }
+
+  def getMethod(methodName: String, className: String): Option[(List[VariableExp], Exp)] = {
+    return methodBodyMap.get((methodName, className))
+  }
 }
