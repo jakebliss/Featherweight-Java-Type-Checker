@@ -4,23 +4,31 @@ import scala.collection.Map
 
 object TypeChecker {
 
-//  def checkType(ast: Exp, gammaMap: Map[VariableExp, Type]) : Type = {
-//    ast match {
-//
-////      case (ast: BinaryExp) =>
-////        ast.operator match {
-////          case "+" => return additionStep(ast.left, ast.right, gammaMap)
-////        }
-////      case (ast: ApplicationExp) =>
-////        applicationStep(ast.leftExp, ast.rightExp, gammaMap)
-////      case (ast: AbstractionExp) =>
-////        abstractionStep(ast.parameter, ast.parType, ast.body, gammaMap)
-////      case (ast: VariableExp) =>
-////        return gammaMap.getOrElse(ast, Type(ExpType.undefined))
-////      case (ast: NatNumExp) =>
-////        return Type(ExpType.nat)
-//    }
-//  }
+  def checkType(ast: Exp, gammaMap: Map[VariableExp, String]) : String = {
+    ast match {
+
+      case (ast: VariableExp) =>
+        return "TODO"
+
+      case (ast: FieldAccessExp) =>
+        return "TODO"
+
+      case (ast: MethodInvocationExp) =>
+        return "TODO"
+        
+      case (ast: ObjectCreationExp) =>
+        return "TODO"
+
+      case (ast: CastExp) =>
+        return "TODO"
+
+      case(ast: ClassExp) =>
+        return "TODO"
+
+      case(ast:MethodExp) =>
+        return "TODO"
+    }
+  }
 
 //    def additionStep(left: Exp, right: Exp, gammaMap: Map[VariableExp, Type]): Type = {
 //      (left, right) match {
