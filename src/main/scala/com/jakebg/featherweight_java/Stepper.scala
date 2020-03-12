@@ -4,7 +4,7 @@ import scala.collection.mutable
 import scala.collection.mutable.Map
 
 object Stepper {
-  var classMap = Map("Object" -> List(("", "")))
+  var classMap = Map("Object" -> List.empty[(String,String)])
   var methodBodyMap = Map[(String, String), (List[VariableExp], Exp)]()
   var classDefinitions: List[ClassExp] = _
 

@@ -11,9 +11,11 @@ class SemanticRulesTests extends FunSuite {
   classDefinitions = classDefinitions :+ ClassExp("B", "Object", List.empty,
     ConstructorExp("B", List.empty, List.empty, List.empty), List.empty)
   classDefinitions = classDefinitions :+ ClassExp("Pair", "Object", List(("Object", "fst"), ("Object", "snd")),
-    ConstructorExp("Pair", List(("Object", "fst"), ("Object", "snd")), List.empty, List("A","B")),
+    ConstructorExp("Pair", List(("Object", "fst"), ("Object", "snd")), List.empty, List("fst","snd")),
     List(MethodExp("Pair", "setfst", List(("Object", VariableExp("newfst"))), ObjectCreationExp("Pair", List(VariableExp("newfst"),
-          FieldAccessExp(VariableExp("this"), "snd"))))))
+          FieldAccessExp(VariableExp("this"), "snd")))),
+         MethodExp("Pair", "setsnd", List(("Object", VariableExp("newsnd"))),
+           ObjectCreationExp("Pair", List(FieldAccessExp(VariableExp("this"), "fst"), VariableExp("newsnd"))))))
   Stepper.initialize(classDefinitions)
 
   // Test to step from a field access expression should return the first field element (E-ProjNew)
@@ -36,7 +38,7 @@ class SemanticRulesTests extends FunSuite {
   // new Pair(new A(), new B()).setfst(new A())
   //   ->  [newfst -> new A()
   //        this -> new Pair(new A(),new B())]
-  //        new Pair(newfst, this.snd)
+  //        new Pair(new A(), new Pair(new A(),new B()).snd)
   test("Step from a method call expression") {
     val ast = MethodInvocationExp(ObjectCreationExp("Pair", List(ObjectCreationExp("A"), ObjectCreationExp("B"))),
                         "setfst", List(ObjectCreationExp("B")))
