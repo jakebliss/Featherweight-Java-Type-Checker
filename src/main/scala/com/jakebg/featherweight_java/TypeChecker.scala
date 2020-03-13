@@ -1,6 +1,6 @@
 package com.jakebg.featherweight_java
 
-import com.jakebg.featherweight_java.Stepper.{classMap, methodBodyMap}
+import com.jakebg.featherweight_java.Stepper.{classDefinitions, classMap, methodBodyMap}
 
 import scala.collection.{Map, mutable}
 
@@ -251,10 +251,30 @@ object TypeChecker {
   }
 
   def getMethod(methodName: String, className: String): Option[(List[VariableExp], Exp)] = {
-    return methodBodyMap.get((methodName, className))
+    methodBodyMap.get((methodName, className)) match {
+      case Some(method) =>
+        return Some(method)
+      case None =>
+        for(classDef <- classDefinitions) {
+          if(classDef.className == className) {
+            return getMethod(methodName, classDef.superClass)
+          }
+        }
+        return None
+    }
   }
 
   def getMethodType(methodName: String, className: String): Option[(List[String], String)] = {
-    return methodTypeMap.get((methodName, className))
+    methodTypeMap.get((methodName, className)) match {
+      case Some(method) =>
+        return Some(method)
+      case None =>
+        for(classDef <- classDefinitions) {
+          if(classDef.className == className) {
+            return getMethodType(methodName, classDef.superClass)
+          }
+        }
+        return None
+    }
   }
 }
