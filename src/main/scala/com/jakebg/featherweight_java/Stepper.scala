@@ -25,7 +25,11 @@ object Stepper {
   }
 
   def resolveAST(ast: Exp): Exp = {
-    var steppedAST = ast
+    var steppedAST = step(ast)
+    while(!steppedAST.isInstanceOf[ObjectCreationExp]) {
+      steppedAST = step(steppedAST)
+    }
+    steppedAST = step(steppedAST)
     return steppedAST
   }
 
@@ -98,12 +102,12 @@ object Stepper {
             val methodTuple = method.asInstanceOf[(List[VariableExp], Exp)]
             var variableList = methodTuple._1
             variableList = variableList
-            var body = methodTuple._2.asInstanceOf[ObjectCreationExp]
+            var body = methodTuple._2
 
             for (index <- 0 until variableList.size) {
-              body = substituteVariables(body, variableList(index), parameters(index)).asInstanceOf[ObjectCreationExp]
+              body = substituteVariables(body, variableList(index), parameters(index))
             }
-            body = substituteVariables(body, VariableExp("this"), term).asInstanceOf[ObjectCreationExp]
+            body = substituteVariables(body, VariableExp("this"), term)
             return body
           case None =>
             println("Method does not exist")
@@ -199,6 +203,16 @@ object Stepper {
   }
 
   def getMethod(methodName: String, className: String): Option[(List[VariableExp], Exp)] = {
-    return methodBodyMap.get((methodName, className))
+      methodBodyMap.get((methodName, className)) match {
+        case Some(method) =>
+          return Some(method)
+        case None =>
+          for(classDef <- classDefinitions) {
+            if(classDef.className == className) {
+              return getMethod(methodName, classDef.superClass)
+            }
+          }
+          return None
+      }
   }
 }
