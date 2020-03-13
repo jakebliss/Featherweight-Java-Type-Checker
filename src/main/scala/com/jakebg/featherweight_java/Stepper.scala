@@ -137,7 +137,7 @@ object Stepper {
     (term) match {
       case(term: ObjectCreationExp) =>
         if(checkIfSubtype(term.className, castClassName)) {
-          return ObjectCreationExp(castClassName, term.parameters)
+          return term
         }
         else {
           println("Cast failed")

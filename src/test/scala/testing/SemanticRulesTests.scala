@@ -130,12 +130,12 @@ class SemanticRulesTests extends FunSuite {
 
   // Test to step from a cast expression (E-CastNew)
   // (Animal) new Dog(new A())
-  //    -> new Animal(new A())
+  //    -> new Dog(new A())
   test("Step from a cast expression to a super type on an object") {
     val ast = CastExp("Animal", ObjectCreationExp("Dog", List(ObjectCreationExp("A"))))
 
     val steppedAst = Stepper.step(ast)
-    assert(steppedAst === ObjectCreationExp("Animal", List(ObjectCreationExp("A"))))
+    assert(steppedAst === ObjectCreationExp("Dog", List(ObjectCreationExp("A"))))
   }
 
   // Test to step from a cast expression on a object creation (E-CastNew)
@@ -317,32 +317,32 @@ class SemanticRulesTests extends FunSuite {
 
   // Test to resolve a cast expression on a method invocation term(E-Cast)
   // (Object) new Dog(new A()).getname()
-  //    -> new Object()
+  //    -> new A()
   test("Resolve a cast expression on a method invocation term") {
     val ast = CastExp("Object", MethodInvocationExp(ObjectCreationExp("Dog", List(ObjectCreationExp("A"))), "getname", List.empty))
 
     val resolveAst = Stepper.resolveAST(ast)
-    assert(resolveAst === ObjectCreationExp("Object"))
+    assert(resolveAst === ObjectCreationExp("A"))
   }
 
   // Test to step from a cast expression on a cast term(E-Cast)
   // (Object) (Animal) new Dog(new A())
-  //    -> (Object) new Animal(new A())
+  //    -> (Object) new Dogl(new A())
   test("Step from a cast expression on a cast expression") {
     val ast = CastExp("Object", CastExp("Animal", ObjectCreationExp("Dog", List(ObjectCreationExp("A")))))
 
     val steppedAst = Stepper.step(ast)
-    assert(steppedAst === CastExp("Object", ObjectCreationExp("Animal", List(ObjectCreationExp("A")))))
+    assert(steppedAst === CastExp("Object", ObjectCreationExp("Dog", List(ObjectCreationExp("A")))))
   }
 
   // Test to resolve a cast expression on a cast term(E-Cast)
   // (Object) (Animal) new Dog(new A())
-  //    -> new Object()
+  //    -> new Dog(new A ())
   test("Resolve a cast expression on a cast expression") {
     val ast = CastExp("Object", CastExp("Animal", ObjectCreationExp("Dog", List(ObjectCreationExp("A")))))
 
     val resolvedAst = Stepper.resolveAST(ast)
-    assert(resolvedAst === ObjectCreationExp("Object", List(ObjectCreationExp("A"))))
+    assert(resolvedAst === ObjectCreationExp("Dog", List(ObjectCreationExp("A"))))
   }
 
 }
